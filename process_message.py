@@ -1,5 +1,8 @@
 import random
 
+MAX_POINTS_PER = 50
+MIN_POINTS_PER = -50
+
 
 def process_message(message, db):
     words = message.lower().split(" ")
@@ -22,4 +25,4 @@ def process_message(message, db):
 
         score += word_score
 
-    return score
+    return max(min(score, MAX_POINTS_PER), MIN_POINTS_PER)
