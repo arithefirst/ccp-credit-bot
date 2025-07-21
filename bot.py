@@ -34,7 +34,7 @@ async def on_message(message):
         return
 
     score = process_message(message.content, db)
-    print(score)
+    print(f"{message.author.name}: {'+' if score > 0 else ''}{score}")
     db.update_social_credit(message.author.id, message.guild.id, score)
 
     # Process commands (important for slash commands to work)

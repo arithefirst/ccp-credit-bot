@@ -2,13 +2,13 @@ import random
 
 
 def process_message(message, db):
-    words = message.split(" ")
+    words = message.lower().split(" ")
 
     score = 0
 
     for word in words:
 
-        if word == "femboy":
+        if word.lower() == "femboy":
             word_score = 15
         else:
             cached_score = db.get_cached_score(word)
