@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 from db import Database
+from process_message import process_message
 
 load_dotenv()
 
@@ -32,9 +33,9 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    print(f"User ID: {message.author.id}")
-    print(f"Guild: {message.guild.name if message.guild else 'DM'}")
-    print(f"Message: {message.content}")
+    score = process_message(message.content)
+    db.update_social_credit(message.author.id, message.guild.id, score)
+    print(score)
 
     # Process commands (important for slash commands to work)
     await bot.process_commands(message)
@@ -43,9 +44,63 @@ async def on_message(message):
 # Slash command: /leaderboard
 @bot.tree.command(name="leaderboard", description="Display the leaderboard")
 async def leaderboard(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        "🏆 Leaderboard command executed! Check the console for details."
+    # Get all users from this server
+    server_data = db.get_social_credit_server(interaction.guild.id)
+
+    # Sort users by credit amount (highest to lowest)
+    sorted_users = sorted(
+        server_data, key=lambda x: x.get("credit_amount", 0), reverse=True
     )
+
+    # Create the embed with yellow color (#FFFF08)
+    embed = discord.Embed(
+        title="🏆 Social Credit Leaderboard 🏆",
+        description="User rankings based on social credit points",
+        color=0xFFFF08,  # Yellow color in hex as requested
+    )
+
+    # Add users with positive or zero points
+    positive_users = [
+        user for user in sorted_users if user.get("credit_amount", 0) >= 0
+    ]
+    if positive_users:
+        positive_list = ""
+        for i, user in enumerate(positive_users, 1):
+            user_id = user.get("id")
+            credit = user.get("credit_amount", 0)
+            # Try to get the member object using the correct user ID
+            member = interaction.guild.get_member(int(user_id))
+            # Use member's display name or fallback to mentioning the user
+            username = member.display_name if member else f"<@{user_id}>"
+            positive_list += f"**{i}.** {username}: **{credit}** points\n"
+
+        embed.add_field(name="Behaved Citizens", value=positive_list, inline=False)
+
+    # Add divider and negative users section
+    negative_users = [user for user in sorted_users if user.get("credit_amount", 0) < 0]
+    if negative_users:
+
+        # Add negative users list
+        negative_list = ""
+        for i, user in enumerate(negative_users, 1):
+            user_id = user.get("id")
+            credit = user.get("credit_amount", 0)
+            # Try to get the member object using the correct user ID
+            member = interaction.guild.get_member(int(user_id))
+            # Use member's display name or fallback to mentioning the user
+            username = member.display_name if member else f"<@{user_id}>"
+            negative_list += f"**{i}.** {username}: **{credit}** points\n"
+
+        # Add the negative list to the embed - this line was missing
+        embed.add_field(
+            name="Untrustworthy Citizens",
+            value=negative_list,
+            inline=False,
+        )
+
+    embed.set_footer(text="Be a good citizen to earn more social credit points!")
+
+    await interaction.response.send_message(embed=embed)
 
 
 # Run the bot
