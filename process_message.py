@@ -13,6 +13,8 @@ def process_message(message, db):
 
         if word.lower() == "femboy":
             word_score = 15
+        if word.lower() == "america":
+            word_score = -15
         else:
             cached_score = db.get_cached_score(word)
             if cached_score is not None:
