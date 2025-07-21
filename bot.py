@@ -34,7 +34,7 @@ def print_message(message, score):
     if logging_channel:
         try:
             channel = bot.get_channel(int(logging_channel))
-            if channel:
+            if channel and channel.guild.id == message.guild.id:
                 # Create embed with message details
                 embed = discord.Embed(
                     title="Social Credit Update",
