@@ -57,7 +57,7 @@ class Database:
                 }
             )
 
-    def get_cached_score(self, message_content):
+    def get_cached_score(self, message_content, max_age_hours=24):
         Cache = Query()
 
         # Hash the message content to use as a key
@@ -68,8 +68,19 @@ class Database:
         result = self.cache.get(Cache.message_hash == message_hash)
 
         if result:
-            # Check if cache is still valid (optional: implement expiry)
-            return result.get("score")
+            # Check if cache is still valid
+            from datetime import datetime
+
+            cache_timestamp = result.get("timestamp")
+            current_timestamp = datetime.now().timestamp()
+            age_hours = (current_timestamp - cache_timestamp) / 3600
+
+            if age_hours <= max_age_hours:
+                return result.get("score")
+            else:
+                # Cache entry is expired, remove it
+                self.cache.remove(Cache.message_hash == message_hash)
+                return None
         return None
 
     def _get_timestamp(self):
@@ -78,10 +89,12 @@ class Database:
 
         return datetime.now().timestamp()
 
-    def clear_old_cache(self, max_age_days=7):
-        from datetime import datetime, timedelta
+    def clear_old_cache(self, max_age_hours=24):
+        from datetime import datetime
 
         Cache = Query()
 
-        cutoff_time = (datetime.now() - timedelta(days=max_age_days)).timestamp()
+        cutoff_time = datetime.now().timestamp() - (max_age_hours * 3600)
+        removed_count = len(self.cache.search(Cache.timestamp < cutoff_time))
         self.cache.remove(Cache.timestamp < cutoff_time)
+        return removed_count

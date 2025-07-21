@@ -1,19 +1,21 @@
-import ollama
+import random
 
 
-def process_message(message):
-    with open("./prompt.md", "r") as file:
-        file_content = file.read()
-        prompt = file_content.replace("[INSERT USER MESSAGE HERE]", message)
+def process_message(message, db):
+    words = message.split(" ")
 
-    messages = [
-        {"role": "user", "content": prompt},
-    ]
+    score = 0
 
-    try:
-        response = ollama.chat(model="qwen:4b", messages=messages)
-        score = int(response["message"]["content"])
-        return score, True  # Return success status along with score
-    except Exception as e:
-        print(f"Error occurred in parser: {e}")
-        return 0, False  # Return failure status with default score
+    for word in words:
+        cached_score = db.get_cached_score(word)
+        if cached_score is not None:
+            # Use cached score
+            word_score = cached_score
+        else:
+            # Generate new score and cache it
+            word_score = random.randint(-5, 10)
+            db.cache_message_value(word, word_score)
+
+        score += word_score
+
+    return score

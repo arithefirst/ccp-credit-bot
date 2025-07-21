@@ -33,24 +33,8 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # Check if this message is already cached
-    cached_score = db.get_cached_score(message.content)
-
-    if cached_score is not None:
-        score = cached_score
-        print("Score cached. Continuing without sentiment analysis.")
-    else:
-        # Calculate new score
-        print("Non-cached score, performing sentiment analysis...")
-        score, success = process_message(message.content)
-        print(f"Done. (Score: {score})")
-
-        # Only cache if processing was successful
-        if success:
-            db.cache_message_value(message.content, score)
-        else:
-            print("Not caching due to processing error.")
-
+    score = process_message(message.content, db)
+    print(score)
     db.update_social_credit(message.author.id, message.guild.id, score)
 
     # Process commands (important for slash commands to work)
