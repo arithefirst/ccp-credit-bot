@@ -17,7 +17,7 @@ def process_message(message, db):
                 word_score = cached_score
             else:
                 # Generate new score and cache it
-                word_score = random.randint(-5, 10)
+                word_score = random.randint(-10, 10)
                 db.cache_message_value(word, word_score)
 
         score += word_score
