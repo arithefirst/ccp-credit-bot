@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 import os
@@ -12,6 +13,56 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 db = Database()
+
+
+def print_message(message, score):
+    # Console stuff
+    truncated_content = message.content[:30]
+    if len(message.content) > 30:
+        truncated_content += "..."
+
+    score_display = f"{'+' if score > 0 else ''}{score}"
+
+    author_color = f"\033[1m\033[38;2;{message.author.color.r};{message.author.color.g};{message.author.color.b}m"
+    reset_color = "\033[0m"
+    colored_author = f"{author_color}{message.author.name}{reset_color}"
+
+    print(f'{colored_author}: "{truncated_content}" ({score_display})')
+
+    # Discord stuff
+    logging_channel = os.getenv("UPDATE_CHANNEL_ID")
+    if logging_channel:
+        try:
+            channel = bot.get_channel(int(logging_channel))
+            if channel:
+                # Create embed with message details
+                embed = discord.Embed(
+                    title="Social Credit Update",
+                    color=(
+                        0xA6D189 if score > 0 else 0xE78284 if score < 0 else 0xE5C890
+                    ),
+                )
+
+                embed.add_field(name="User", value=message.author.mention, inline=True)
+
+                embed.add_field(
+                    name="Score Change",
+                    value=f"{'+' if score > 0 else ''}{score}",
+                    inline=True,
+                )
+
+                embed.add_field(
+                    name="Message", value=f'"{truncated_content}"', inline=False
+                )
+
+                embed.set_thumbnail(url=message.author.avatar.url)
+
+                # Send the embed (this needs to be async)
+                asyncio.create_task(channel.send(embed=embed))
+        except ValueError:
+            print(f"Invalid UPDATE_CHANNEL_ID: {logging_channel}")
+        except Exception as e:
+            print(f"Error sending embed: {e}")
 
 
 @bot.event
@@ -34,7 +85,8 @@ async def on_message(message):
         return
 
     score = process_message(message.content, db)
-    print(f"{message.author.name}: {'+' if score > 0 else ''}{score}")
+    print_message(message, score)
+
     db.update_social_credit(message.author.id, message.guild.id, score)
 
     # Process commands (important for slash commands to work)
