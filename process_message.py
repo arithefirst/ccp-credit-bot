@@ -11,9 +11,9 @@ def process_message(message, db):
 
     for word in words:
 
-        if word.lower() == "femboy":
+        if "femboy" in word.lower() or "jinping" in word.lower():
             word_score = 15
-        if word.lower() == "america":
+        elif "america" in word.lower():
             word_score = -15
         else:
             cached_score = db.get_cached_score(word)
