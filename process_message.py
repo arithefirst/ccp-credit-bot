@@ -6,15 +6,14 @@ def process_message(message):
         file_content = file.read()
         prompt = file_content.replace("[INSERT USER MESSAGE HERE]", message)
 
-    print(message)
-
     messages = [
         {"role": "user", "content": prompt},
     ]
 
     try:
         response = ollama.chat(model="qwen:4b", messages=messages)
-        return int(response["message"]["content"])
-    except:
-        print("Error occurred in parser.")
-        return 0
+        score = int(response["message"]["content"])
+        return score, True  # Return success status along with score
+    except Exception as e:
+        print(f"Error occurred in parser: {e}")
+        return 0, False  # Return failure status with default score
