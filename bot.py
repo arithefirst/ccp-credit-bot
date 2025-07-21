@@ -36,8 +36,15 @@ def print_message(message, score):
             channel = bot.get_channel(int(logging_channel))
             if channel and channel.guild.id == message.guild.id:
                 # Create embed with message details
+                if score > 0:
+                    title = "🎉 Citizen Upholds Socialist Values!"
+                elif score < 0:
+                    title = "🚨 Citizen Loses Rights!"
+                else:
+                    title = "😐 Citizen Remains Unremarkable."
+
                 embed = discord.Embed(
-                    title="Social Credit Update",
+                    title=title,
                     color=(
                         0xA6D189 if score > 0 else 0xE78284 if score < 0 else 0xE5C890
                     ),
