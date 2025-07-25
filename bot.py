@@ -5,6 +5,10 @@ import os
 from dotenv import load_dotenv
 from db import Database
 from process_message import process_message
+from discord import app_commands
+from datetime import datetime
+import pytz
+
 
 load_dotenv()
 
@@ -103,7 +107,6 @@ async def on_message(message):
 # Slash command: /leaderboard
 @bot.tree.command(name="leaderboard", description="Display the leaderboard")
 async def leaderboard(interaction: discord.Interaction):
-    # Get all users from this server
     server_data = db.get_social_credit_server(interaction.guild.id)
 
     # Sort users by credit amount (highest to lowest)
@@ -111,11 +114,10 @@ async def leaderboard(interaction: discord.Interaction):
         server_data, key=lambda x: x.get("credit_amount", 0), reverse=True
     )
 
-    # Create the embed with yellow color (#FFFF08)
     embed = discord.Embed(
         title="🏆 Social Credit Leaderboard 🏆",
         description="User rankings based on social credit points",
-        color=0xFFFF08,  # Yellow color in hex as requested
+        color=0xE5C890,
     )
 
     # Add users with positive or zero points
@@ -150,7 +152,6 @@ async def leaderboard(interaction: discord.Interaction):
             username = member.display_name if member else f"<@{user_id}>"
             negative_list += f"**{i}.** {username}: **{credit}** points\n"
 
-        # Add the negative list to the embed - this line was missing
         embed.add_field(
             name="Untrustworthy Citizens",
             value=negative_list,
@@ -159,6 +160,56 @@ async def leaderboard(interaction: discord.Interaction):
 
     embed.set_footer(text="Be a good citizen to earn more social credit points!")
 
+    await interaction.response.send_message(embed=embed)
+
+
+# Slash command: /set-timezone
+@bot.tree.command(name="set-timezone", description="Set your timezone")
+@app_commands.describe(
+    timezone="Your timezone (e.g., 'America/New_York', 'Europe/London')"
+)
+async def set_timezone(interaction: discord.Interaction, timezone: str):
+
+    try:
+        db.update_timezone(interaction.user.id, interaction.guild.id, timezone)
+    except ValueError:
+        await interaction.response.send_message(
+            f'"{timezone}" is not a valid timezone. Please enter your timezone in [IANA format](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).',
+            ephemeral=True,
+        )
+        return
+
+    target_obj = pytz.timezone(timezone)
+
+    await interaction.response.send_message(
+        f"Your timezone has been set to: **{timezone}** ({datetime.now(target_obj)})",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(name="time", description="View the time for server members")
+async def time(interaction: discord.Interaction):
+    server_data = db.get_social_credit_server(interaction.guild.id)
+
+    embed = discord.Embed(
+        title="⏰ Server Member Times ⏰",
+        description="Current local time for server members (set with /set-timezone)",
+        color=0xE5C890,
+    )
+
+    contents = ""
+
+    for user in server_data:
+        user_id = user.get("id")
+        timezone = user.get("timezone")
+        username = f"<@{user_id}>"
+
+        if timezone and timezone in pytz.all_timezones:
+            now = datetime.now(pytz.timezone(timezone))
+            time_str = now.strftime("%B %-d %Y, %I:%M %p")
+            contents += f"{username}: **{time_str}** ({timezone})\n"
+
+    embed.add_field(name="Times", inline=False, value=contents)
     await interaction.response.send_message(embed=embed)
 
 

@@ -1,4 +1,5 @@
 from tinydb import TinyDB, Query
+import pytz
 
 
 class Database:
@@ -6,6 +7,8 @@ class Database:
         self.db = TinyDB("database.json")
         self.users = self.db.table("users")
         self.cache = self.db.table("cache")
+
+    ## Social Credit Stuff
 
     def update_social_credit(self, user_id, server_id, amount):
         User = Query()
@@ -30,6 +33,30 @@ class Database:
     def get_social_credit_server(self, server_id):
         User = Query()
         return self.users.search(User.server_id == server_id)
+
+    ## Timezone stuff
+    def update_timezone(self, user_id, server_id, timezone):
+
+        # Validate timezone using pytz
+        if timezone not in pytz.all_timezones:
+            raise ValueError(f"Invalid IANA timezone: {timezone}")
+
+        User = Query()
+        existing_user = self.users.search(
+            (User.id == user_id) & (User.server_id == server_id)
+        )
+
+        if existing_user:
+            self.users.update(
+                {"timezone": timezone},
+                (User.id == user_id) & (User.server_id == server_id),
+            )
+        else:
+            self.users.insert(
+                {"id": user_id, "server_id": server_id, "timezone": timezone}
+            )
+
+    ## Caching stuff
 
     def cache_message_value(self, message_content, score):
         Cache = Query()
