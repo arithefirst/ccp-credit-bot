@@ -213,6 +213,39 @@ async def time(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
+# Slash command: /force-set-timezone
+@bot.tree.command(name="force-set-timezone", description="Admin: Set a user's timezone")
+@app_commands.describe(
+    user="The user to set the timezone for",
+    timezone="Timezone in IANA format (e.g., 'America/New_York')",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def force_set_timezone(
+    interaction: discord.Interaction, user: discord.Member, timezone: str
+):
+    # Only allow admins to use this command
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "You do not have permission to use this command.",
+            ephemeral=True,
+        )
+        return
+
+    try:
+        db.update_timezone(user.id, interaction.guild.id, timezone)
+    except ValueError:
+        await interaction.response.send_message(
+            f'"{timezone}" is not a valid timezone. Please enter your timezone in [IANA format](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).',
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.send_message(
+        f"Timezone for {user.mention} has been set to **{timezone}**.",
+        ephemeral=True,
+    )
+
+
 # Run the bot
 if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN")
