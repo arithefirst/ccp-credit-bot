@@ -197,8 +197,7 @@ async def time(interaction: discord.Interaction):
         color=0xE5C890,
     )
 
-    contents = ""
-
+    times_list = []
     for user in server_data:
         user_id = user.get("id")
         timezone = user.get("timezone")
@@ -207,9 +206,35 @@ async def time(interaction: discord.Interaction):
         if timezone and timezone in pytz.all_timezones:
             now = datetime.now(pytz.timezone(timezone))
             time_str = now.strftime("%B %-d %Y, %I:%M %p")
-            contents += f"{username}: **{time_str}** ({timezone})\n"
+            times_list.append(f"{username}: **{time_str}** ({timezone})\n")
 
-    embed.add_field(name="Times", inline=False, value=contents)
+    # Paginate the content to avoid hitting the 1024 character limit
+    if not times_list:
+        embed.add_field(name="Times", value="No times set yet!", inline=False)
+    else:
+        current_field = ""
+        field_count = 0
+
+        for time_entry in times_list:
+            # Check if adding the next entry would exceed the limit
+            if len(current_field) + len(time_entry) > 1024:
+                # Add the current field and start a new one
+                field_name = (
+                    "Times" if field_count == 0 else "\u200b"
+                )  # Invisible character
+                embed.add_field(name=field_name, value=current_field, inline=False)
+                current_field = time_entry
+                field_count += 1
+            else:
+                current_field += time_entry
+
+        # Add the last field if there's anything left
+        if current_field:
+            field_name = (
+                "Times" if field_count == 0 else "\u200b"
+            )  # Invisible character
+            embed.add_field(name=field_name, value=current_field, inline=False)
+
     await interaction.response.send_message(embed=embed)
 
 
